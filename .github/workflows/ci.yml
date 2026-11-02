@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test
+        run: swift test
+      - name: Build the app, disk image and zip
+        run: ./scripts/package.sh
+      - name: Check the app
+        run: |
+          for program in PortsApp PortsPanel ports; do
+            lipo "dist/Ports.app/Contents/MacOS/$program" -verify_arch arm64 x86_64
+          done
+          codesign --verify --deep --strict dist/Ports.app
+          dist/Ports.app/Contents/MacOS/ports --version

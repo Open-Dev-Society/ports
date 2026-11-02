@@ -114,10 +114,13 @@ final class PanelApp: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
     /// Running memory per project, biggest first, so colours match the treemap's columns.
     private var projects: [(name: String, memory: UInt64)] {
-        Dictionary(grouping: items, by: \.project)
-            .map { (name: $0.key, memory: $0.value.filter { !$0.stopped }.reduce(0) { $0 + $1.memory }, size: $0.value.reduce(0) { $0 + $1.memory }) }
-            .sorted { $0.size != $1.size ? $0.size > $1.size : $0.name < $1.name }
-            .map { (name: $0.name, memory: $0.memory) }
+        func total(_ items: [MapItem]) -> UInt64 { items.reduce(0) { $0 + $1.memory } }
+        let groups = Dictionary(grouping: items, by: \.project)
+        let names = groups.keys.sorted { a, b in
+            let (sizeA, sizeB) = (total(groups[a]!), total(groups[b]!))
+            return sizeA != sizeB ? sizeA > sizeB : a < b
+        }
+        return names.map { (name: $0, memory: total(groups[$0]!.filter { !$0.stopped })) }
     }
 
     // MARK: Layout

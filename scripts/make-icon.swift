@@ -1,4 +1,4 @@
-// Draws the app icon: the panel's treemap on a dark tile.
+// Draws the app icon: the menu bar's port glyph on a dark tile, its four pins in the panel's colours.
 // Run: swift scripts/make-icon.swift && iconutil -c icns Resources/AppIcon.iconset -o Resources/AppIcon.icns
 import AppKit
 
@@ -12,34 +12,51 @@ func draw(pixels: Int) -> Data {
     NSGraphicsContext.saveGraphicsState()
     NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
     let unit = CGFloat(pixels) / 1024
-    func rect(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat) -> NSRect { NSRect(x: x * unit, y: y * unit, width: w * unit, height: h * unit) }
 
     // Apple's icon grid: an 824 tile centred in 1024, leaving room for the shadow.
-    let tile = NSBezierPath(roundedRect: rect(100, 100, 824, 824), xRadius: 185 * unit, yRadius: 185 * unit)
+    let tile = NSBezierPath(roundedRect: NSRect(x: 100 * unit, y: 100 * unit, width: 824 * unit, height: 824 * unit), xRadius: 185 * unit, yRadius: 185 * unit)
     NSGraphicsContext.saveGraphicsState()
     let shadow = NSShadow()
     shadow.shadowColor = NSColor.black.withAlphaComponent(0.3)
     shadow.shadowBlurRadius = 24 * unit
     shadow.shadowOffset = NSSize(width: 0, height: -10 * unit)
     shadow.set()
-    color(0x17151F).setFill()
+    color(0x1C1B22).setFill()
     tile.fill()
     NSGraphicsContext.restoreGraphicsState()
-    NSGradient(starting: color(0x2C2740), ending: color(0x12111A))!.draw(in: tile, angle: -90)
+    NSGradient(starting: color(0x2E2D36), ending: color(0x141319))!.draw(in: tile, angle: -90)
 
-    let tiles: [(NSRect, Int, Int)] = [
-        (rect(204, 204, 300, 616), 0x8B6CF0, 0xA48BF5),
-        (rect(528, 516, 292, 304), 0x4C9BF0, 0x74B3F5),
-        (rect(528, 204, 134, 288), 0x30B0C7, 0x56C6DA),
-        (rect(686, 360, 134, 132), 0xE0A030, 0xEAB95F),
-    ]
-    for (frame, base, light) in tiles {
-        NSGradient(starting: color(light), ending: color(base))!
-            .draw(in: NSBezierPath(roundedRect: frame, xRadius: 44 * unit, yRadius: 44 * unit), angle: -90)
+    // Lucide's "ethernet-port" (ISC licence, lucide.dev) on its 24-point grid, y pointing down.
+    // Centred: the outline spans x 2...22 and y 4...20 of the grid.
+    let scale = 24 * unit
+    let flip = AffineTransform(translationByX: 512 * unit - 12 * scale, byY: 512 * unit + 12 * scale)
+    func point(_ x: CGFloat, _ y: CGFloat) -> NSPoint { flip.transform(NSPoint(x: x * scale, y: -y * scale)) }
+
+    let outline = NSBezierPath()
+    outline.move(to: point(15, 20))
+    outline.line(to: point(18, 17))
+    outline.appendArc(from: point(22, 17), to: point(22, 4), radius: 2 * scale)
+    outline.appendArc(from: point(22, 4), to: point(2, 4), radius: 2 * scale)
+    outline.appendArc(from: point(2, 4), to: point(2, 17), radius: 2 * scale)
+    outline.appendArc(from: point(2, 17), to: point(6, 17), radius: 2 * scale)
+    outline.line(to: point(6, 17))
+    outline.line(to: point(9, 20))
+    outline.close()
+    outline.lineWidth = 1.6 * scale
+    outline.lineCapStyle = .round
+    outline.lineJoinStyle = .round
+    NSColor.white.setStroke()
+    outline.stroke()
+
+    for (x, hex) in zip([6, 10, 14, 18], [0x8B6CF0, 0x4C9BF0, 0x30B0C7, 0xE0A030]) {
+        let pin = NSBezierPath()
+        pin.move(to: point(CGFloat(x), 8))
+        pin.line(to: point(CGFloat(x), 10))
+        pin.lineWidth = 1.6 * scale
+        pin.lineCapStyle = .round
+        color(hex).setStroke()
+        pin.stroke()
     }
-    let free = NSBezierPath(roundedRect: rect(686, 204, 134, 132), xRadius: 44 * unit, yRadius: 44 * unit)
-    NSColor.white.withAlphaComponent(0.14).setFill()
-    free.fill()
     NSGraphicsContext.restoreGraphicsState()
     return rep.representation(using: .png, properties: [:])!
 }

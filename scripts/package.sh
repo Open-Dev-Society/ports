@@ -8,9 +8,10 @@ version=$(sed -n 's/.*portsVersion = "\(.*\)"/\1/p' Sources/PortsCore/Ports.swif
 stage=$(mktemp -d)
 trap 'rm -rf "$stage"' EXIT
 
-ditto dist/Ports.app "$stage/Ports.app"
-ln -s /Applications "$stage/Applications"
-hdiutil create -quiet -volname Ports -srcfolder "$stage" -ov -format UDZO "dist/Ports-$version.dmg"
+# dmgbuild lays out the window (background, icon positions) without scripting Finder, so it works on CI.
+python3 -m venv "$stage/venv"
+"$stage/venv/bin/pip" install --quiet dmgbuild==1.6.7
+"$stage/venv/bin/dmgbuild" -s scripts/dmg-settings.py -D app=dist/Ports.app Ports "dist/Ports-$version.dmg"
 ditto -c -k --keepParent dist/Ports.app "dist/Ports-$version.zip"
 (cd dist && shasum -a 256 "Ports-$version.dmg" "Ports-$version.zip" > "Ports-$version.sha256")
 ls -lh dist/Ports-"$version".*

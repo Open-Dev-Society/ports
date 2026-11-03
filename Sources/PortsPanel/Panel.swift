@@ -24,11 +24,14 @@ final class PanelApp: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var confirming = false
     private var working: String?
     private var message: String?
+    /// The page of the first-run welcome being shown, or nil once it's done.
+    private var welcomeStep: Int?
 
     init(arguments: [String]) {
         let n = arguments.dropFirst(1).prefix(4).map { Double($0) ?? 0 }
         anchorFrame = n.count == 4 ? NSRect(x: n[0], y: n[1], width: n[2], height: n[3]) : .zero
         servers = arguments.count > 5 ? (try? JSONDecoder().decode([Server].self, from: Data(arguments[5].utf8))) ?? [] : []
+        welcomeStep = arguments.dropFirst(6).first == welcomeArgument ? 0 : nil
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -54,6 +57,8 @@ final class PanelApp: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         // transient popover in an inactive app can close the moment it opens.
         popover.behavior = .applicationDefined
         popover.delegate = self
+        // Seen once is enough: closing it early shouldn't make it reappear at every login.
+        if welcomeStep != nil { setWelcomed() }
         rebuild()
         NSApp.activate(ignoringOtherApps: true)
         popover.show(relativeTo: anchor.contentView!.bounds, of: anchor.contentView!, preferredEdge: .minY)
@@ -127,6 +132,12 @@ final class PanelApp: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
     private func rebuild() {
         root.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        if let welcomeStep {
+            welcome(welcomeStep).forEach { add($0) }
+            root.layoutSubtreeIfNeeded()
+            popover.contentSize = root.fittingSize
+            return
+        }
         add(header())
         add(MeterView(segments: projects.enumerated().map { (Double($0.element.memory) / Double(capacity), Palette.bar($0.offset)) },
                       budgetShare: Double(budget) / Double(capacity)), height: 30)
@@ -305,6 +316,95 @@ final class PanelApp: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             views.append(stop)
         }
         return row(views, spacing: 6)
+    }
+
+    // MARK: Welcome
+
+    /// Three short pages inside the panel itself, so it points straight at the icon people will use.
+    private func welcome(_ step: Int) -> [NSView] {
+        var views: [NSView] = []
+        switch step {
+        case 0:
+            let logo = NSImageView(image: NSApp.applicationIconImage)
+            logo.widthAnchor.constraint(equalToConstant: 64).isActive = true
+            logo.heightAnchor.constraint(equalToConstant: 64).isActive = true
+            views.append(row([logo, spacer()], spacing: 0))
+            let count = servers.count
+            let headline = count == 0 ? "No dev servers are running right now."
+                : "\(count) dev \(count == 1 ? "server is" : "servers are") using \(formatMemory(used)) right now."
+            views += heading("Welcome to Ports", headline)
+            views.append(paragraph("Ports lives in your menu bar, just above this. It finds the local servers that you, your terminal and your coding agents start, and shows what each one costs."))
+        case 1:
+            views += heading("Reading the panel", "One tile for each server")
+            // An example drawn with the panel's own tiles.
+            let example = NSView()
+            example.heightAnchor.constraint(equalToConstant: 48).isActive = true
+            var x: CGFloat = 0
+            for (index, (title, value, width, moon)) in [("storefront", "1.2 GB", 176.0, false), ("api", "610 MB", 108.0, true), (":5173", "240 MB", 56.0, false)].enumerated() {
+                let tile = TileButton(frame: NSRect(x: x, y: 0, width: width, height: 48), style: .solid, title: title, value: value, color: Palette.tile(index),
+                                      moon: moon, selected: false, target: nil, action: nil, id: title)
+                tile.setAccessibilityElement(false)
+                example.addSubview(tile)
+                x += width + 4
+            }
+            views.append(example)
+            views.append(explanation(icon("cursorarrow.click", color: .labelColor), "Bigger tiles use more memory. Click one to open or stop it."))
+            views.append(explanation(icon("moon", color: .labelColor), "Idle: up for three hours with nothing connected. Stop Idle stops them all."))
+            views.append(explanation(icon("wifi", color: .systemOrange), "Reachable on Wi-Fi: others on your network may be able to open it."))
+            views.append(explanation(icon("arrow.uturn.backward", color: .labelColor), "Stopped the wrong one? Undo lasts five seconds."))
+        default:
+            views += heading("Stays out of your way", "About 12 MB, and nothing leaves your Mac")
+            views.append(paragraph("No account and no network requests. Click the icon in your menu bar whenever you want to check."))
+            let login = NSButton(checkboxWithTitle: "Open Ports when you log in", target: self, action: #selector(toggleLogin))
+            login.state = SMAppService.mainApp.status == .enabled ? .on : .off
+            views.append(login)
+            if let message { views.append(paragraph(message, font: .systemFont(ofSize: 12), color: .systemOrange)) }
+        }
+
+        let last = step == 2
+        let next = button(last ? "Show My Servers" : "Continue", action: #selector(welcomeNext), label: last ? "Finish and show your servers" : "Next page")
+        next.bezelColor = .controlAccentColor
+        next.keyEquivalent = "\r"
+        var controls: [NSView] = [PageDots(count: 3, current: step), spacer()]
+        if step > 0 { controls.append(button("Back", action: #selector(welcomeBack), label: "Previous page")) }
+        controls.append(next)
+        views.append(row(controls, spacing: 6))
+        return views
+    }
+
+    private func heading(_ caption: String, _ title: String) -> [NSView] {
+        let small = text(caption, font: .systemFont(ofSize: 12, weight: .medium), color: .secondaryLabelColor)
+        let big = paragraph(title, font: .systemFont(ofSize: 17, weight: .semibold), color: .labelColor)
+        let stack = NSStackView(views: [small, big])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 2
+        return [stack]
+    }
+
+    private func explanation(_ visual: NSView, _ words: String) -> NSView {
+        visual.translatesAutoresizingMaskIntoConstraints = false
+        let slot = NSView()
+        slot.addSubview(visual)
+        NSLayoutConstraint.activate([
+            slot.widthAnchor.constraint(equalToConstant: 24),
+            slot.heightAnchor.constraint(equalToConstant: 18),
+            visual.centerXAnchor.constraint(equalTo: slot.centerXAnchor),
+            visual.centerYAnchor.constraint(equalTo: slot.centerYAnchor),
+        ])
+        let line = row([slot, paragraph(words, width: panelWidth - 34)], spacing: 10)
+        line.alignment = .top
+        return line
+    }
+
+    @objc private func welcomeNext() {
+        welcomeStep = welcomeStep.flatMap { $0 < 2 ? $0 + 1 : nil }
+        rebuild()
+    }
+
+    @objc private func welcomeBack() {
+        welcomeStep = welcomeStep.map { max($0 - 1, 0) }
+        rebuild()
     }
 
     // MARK: Actions
@@ -493,6 +593,15 @@ final class PanelApp: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         field.textColor = color
         field.lineBreakMode = .byTruncatingTail
         field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        return field
+    }
+
+    private func paragraph(_ value: String, width: CGFloat = panelWidth, font: NSFont = .systemFont(ofSize: 13), color: NSColor = .secondaryLabelColor) -> NSTextField {
+        let field = NSTextField(wrappingLabelWithString: value)
+        field.font = font
+        field.textColor = color
+        field.preferredMaxLayoutWidth = width
+        field.isSelectable = false
         return field
     }
 

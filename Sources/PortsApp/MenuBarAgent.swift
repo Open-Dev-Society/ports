@@ -9,16 +9,18 @@ final class MenuBarAgent: NSObject, NSApplicationDelegate {
     private var panel: Process?
     private var cachedServers = "[]"
     private var scanning = false
+    /// The first time Ports runs, the panel opens by itself so people see where the app lives.
+    private var welcome = !(UserDefaults(suiteName: "io.github.open-dev-society.ports.settings")?.bool(forKey: "welcomed") ?? false)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = item.button {
             button.imagePosition = .imageLeading
             button.imageHugsTitle = true
-            button.font = .monospacedSystemFont(ofSize: 12, weight: .medium)
+            button.font = .systemFont(ofSize: 13, weight: .medium)
             button.target = self
             button.action = #selector(togglePanel)
-            button.image = meter(first: 0, second: 0)
+            button.image = portIcon()
         }
         enableLoginItemOnce()
         refresh()
@@ -54,34 +56,47 @@ final class MenuBarAgent: NSObject, NSApplicationDelegate {
         }
     }
 
-    /// `summary` is the helper's first line: count, total memory, and the meter's two shares.
+    /// `summary` is the helper's first line: count, total memory, and two budget shares the menu bar no longer draws.
     private func show(summary: String, servers: String) {
         guard let button = item.button else { return }
         cachedServers = servers
         let parts = summary.split(separator: "\t").map(String.init)
         guard parts.count == 4 else { return }
         let count = Int(parts[0]) ?? 0
-        button.image = meter(first: Double(parts[2]) ?? 0, second: Double(parts[3]) ?? 0)
         button.title = count == 0 ? "" : parts[1]
         button.toolTip = count == 0 ? "No dev servers running" : "\(count) dev \(count == 1 ? "server" : "servers") using \(parts[1])"
         button.setAccessibilityLabel(button.toolTip)
+        if welcome, panel == nil { togglePanel() }
     }
 
-    /// A template image, so the system colours it for the menu bar like any other icon.
-    private func meter(first: Double, second: Double) -> NSImage {
-        let image = NSImage(size: NSSize(width: 26, height: 6), flipped: false) { rect in
-            NSBezierPath(roundedRect: rect, xRadius: 3, yRadius: 3).addClip()
-            NSColor.black.withAlphaComponent(0.25).setFill()
-            rect.fill()
-            let firstWidth = (rect.width * first).rounded()
-            NSColor.black.setFill()
-            NSRect(x: 0, y: 0, width: firstWidth, height: rect.height).fill()
-            NSColor.black.withAlphaComponent(0.6).setFill()
-            NSRect(x: firstWidth + 1, y: 0, width: (rect.width * second).rounded(), height: rect.height).fill()
+    /// Lucide's "ethernet-port" (ISC licence, lucide.dev), drawn on its 24-point grid. A template image,
+    /// so the system colours it for the menu bar like any other icon.
+    private func portIcon() -> NSImage {
+        let image = NSImage(size: NSSize(width: 14, height: 14), flipped: true) { rect in
+            let path = NSBezierPath()
+            path.move(to: NSPoint(x: 15, y: 20))
+            path.line(to: NSPoint(x: 18, y: 17))
+            path.appendArc(from: NSPoint(x: 22, y: 17), to: NSPoint(x: 22, y: 4), radius: 2)
+            path.appendArc(from: NSPoint(x: 22, y: 4), to: NSPoint(x: 2, y: 4), radius: 2)
+            path.appendArc(from: NSPoint(x: 2, y: 4), to: NSPoint(x: 2, y: 17), radius: 2)
+            path.appendArc(from: NSPoint(x: 2, y: 17), to: NSPoint(x: 6, y: 17), radius: 2)
+            path.line(to: NSPoint(x: 6, y: 17))
+            path.line(to: NSPoint(x: 9, y: 20))
+            path.close()
+            for x in [6, 10, 14, 18] {
+                path.move(to: NSPoint(x: x, y: 8))
+                path.line(to: NSPoint(x: x, y: 9))
+            }
+            path.transform(using: AffineTransform(scale: rect.width / 24))
+            path.lineWidth = 2 * rect.width / 24
+            path.lineCapStyle = .round
+            path.lineJoinStyle = .round
+            NSColor.black.setStroke()
+            path.stroke()
             return true
         }
         image.isTemplate = true
-        image.accessibilityDescription = "Ports memory meter"
+        image.accessibilityDescription = "Ports"
         return image
     }
 
@@ -94,7 +109,8 @@ final class MenuBarAgent: NSObject, NSApplicationDelegate {
         let frame = window.frame
         let process = Process()
         process.executableURL = helper
-        process.arguments = ["\(frame.minX)", "\(frame.minY)", "\(frame.width)", "\(frame.height)", cachedServers]
+        process.arguments = ["\(frame.minX)", "\(frame.minY)", "\(frame.width)", "\(frame.height)", cachedServers] + (welcome ? ["--welcome"] : [])
+        welcome = false
         process.terminationHandler = { [weak self] finished in
             DispatchQueue.main.async {
                 if finished.terminationStatus == quitExitCode { NSApp.terminate(nil) }

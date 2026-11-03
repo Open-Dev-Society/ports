@@ -39,7 +39,7 @@ Existing tools answer "what's on this port?". Ports answers "what's running that
 
 ## Features
 
-- **Memory in your menu bar.** A small meter and a number, refreshed every 30 seconds.
+- **Memory in your menu bar.** A port icon and how much memory your dev servers use, refreshed every 30 seconds.
 - **Real memory figures.** Uses the same number as Activity Monitor. Plain RSS can read 11 MB for a server really using 3.7 GB, because most of it is swapped out.
 - **See what matters at a glance.** One tile per server, sized by memory and grouped by project, against a budget you can change.
 - **Only your dev servers.** Spotify, AirPlay and other apps or system services stay hidden.
@@ -54,7 +54,7 @@ Existing tools answer "what's on this port?". Ports answers "what's running that
 
 1. Download `Ports-<version>.dmg` from the [latest release](https://github.com/Open-Dev-Society/ports/releases/latest).
 2. Open it and drag **Ports** to **Applications**.
-3. Open Ports from Applications.
+3. Open Ports from Applications. The first time, its panel opens by itself under the menu bar icon with a short welcome.
 
 > [!IMPORTANT]
 > **macOS will warn you the first time.** Ports isn't notarized by Apple yet ([tracked here](https://github.com/Open-Dev-Society/ports/issues/1)), so macOS says it can't verify the app. To open it anyway: try opening Ports, then go to **System Settings → Privacy & Security** and choose **Open Anyway**. Prefer not to? [Build it from source](#build-from-source) instead.
@@ -65,7 +65,7 @@ Requires macOS 13 or later on Apple silicon or Intel. Liquid Glass appears on ma
 
 ## How to use it
 
-Click the meter in the menu bar.
+Click the port icon in the menu bar.
 
 | In the panel | What it does |
 | --- | --- |

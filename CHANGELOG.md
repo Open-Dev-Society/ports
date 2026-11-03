@@ -4,6 +4,18 @@ Notable changes to Ports. The format follows [Keep a Changelog](https://keepacha
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-03
+
+### Added
+
+- A short welcome the first time Ports runs. The panel opens by itself under the menu bar icon, with your own numbers.
+
+### Changed
+
+- The menu bar shows a port icon and the memory figure instead of the small meter.
+- New app icon: the same port, minimal, its pins in the panel's colours.
+- The disk image window: drag Ports, on its cable, into a port that holds Applications.
+
 ## [0.1.0] - 2026-11-02
 
 First public release.
@@ -22,5 +34,6 @@ First public release.
 - `ports` terminal command, inside the app.
 - Universal build for Apple silicon and Intel.
 
-[Unreleased]: https://github.com/Open-Dev-Society/ports/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Open-Dev-Society/ports/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/Open-Dev-Society/ports/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/Open-Dev-Society/ports/releases/tag/v0.1.0

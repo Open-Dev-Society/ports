@@ -197,6 +197,33 @@ final class StatusPill: NSView {
     }
 }
 
+/// Which page of the welcome is showing.
+final class PageDots: NSView {
+    private let count: Int
+    private let current: Int
+
+    init(count: Int, current: Int) {
+        self.count = count
+        self.current = current
+        super.init(frame: .zero)
+        translatesAutoresizingMaskIntoConstraints = false
+        widthAnchor.constraint(equalToConstant: CGFloat(count) * 12).isActive = true
+        heightAnchor.constraint(equalToConstant: 6).isActive = true
+        setAccessibilityElement(true)
+        setAccessibilityRole(.staticText)
+        setAccessibilityLabel("Page \(current + 1) of \(count)")
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func draw(_ dirtyRect: NSRect) {
+        for index in 0..<count {
+            NSColor.labelColor.withAlphaComponent(index == current ? 1 : 0.25).setFill()
+            NSBezierPath(ovalIn: NSRect(x: CGFloat(index) * 12, y: 0, width: 6, height: 6)).fill()
+        }
+    }
+}
+
 final class Swatch: NSView {
     private let color: NSColor
 

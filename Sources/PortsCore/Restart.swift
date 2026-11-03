@@ -109,6 +109,15 @@ public func setLoginItemWasEnabled() {
     UserDefaults(suiteName: defaultsSuite)?.set(true, forKey: "loginItemEnabled")
 }
 
+// MARK: - Welcome
+
+public let welcomeArgument = "--welcome"
+
+/// The menu bar agent reads the same key without linking PortsCore.
+public func setWelcomed() {
+    UserDefaults(suiteName: defaultsSuite)?.set(true, forKey: "welcomed")
+}
+
 // MARK: - Memory budget
 
 public let budgetChoices = [2, 3, 4, 6, 8, 16]

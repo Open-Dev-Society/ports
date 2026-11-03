@@ -11,7 +11,7 @@ jobs:
   release:
     runs-on: macos-26
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Check the tag matches the version
         run: |
           version=$(sed -n 's/.*portsVersion = "\(.*\)"/\1/p' Sources/PortsCore/Ports.swift)

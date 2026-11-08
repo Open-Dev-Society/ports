@@ -26,17 +26,44 @@ final class MenuBarAgent: NSObject, NSApplicationDelegate {
         refresh()
         let timer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in self?.refresh() }
         timer.tolerance = 10
+        let updates = Timer(fire: Date(timeIntervalSinceNow: 60), interval: 24 * 3600, repeats: true) { [weak self] _ in self?.checkForUpdates() }
+        updates.tolerance = 600
+        RunLoop.main.add(updates, forMode: .common)
     }
 
     /// This target doesn't link PortsCore, so the argument is spelled out here.
     private func enableLoginItemOnce() {
+        helper("PortsPanel", ["--enable-login-once"])
+    }
+
+    /// Sparkle lives in its own program, so it costs memory only while a check runs.
+    private func checkForUpdates() {
+        guard UserDefaults(suiteName: "io.github.open-dev-society.ports.settings")?.object(forKey: "automaticUpdates") as? Bool ?? true else { return }
+        helper("PortsUpdater", [])
+    }
+
+    private func helper(_ name: String, _ arguments: [String]) {
         let process = Process()
-        process.executableURL = Bundle.main.executableURL?.deletingLastPathComponent().appendingPathComponent("PortsPanel")
-        process.arguments = ["--enable-login-once"]
+        process.executableURL = Bundle.main.executableURL?.deletingLastPathComponent().appendingPathComponent(name)
+        process.arguments = arguments
         try? process.run()
     }
 
+    private let version = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
+
+    /// If an update replaced this app while it ran and nothing restarted it, start the new copy and quit.
+    private func restartIfUpdated() {
+        let plist = Bundle.main.bundleURL.appendingPathComponent("Contents/Info.plist")
+        guard let info = NSDictionary(contentsOf: plist), let onDisk = info["CFBundleVersion"] as? String, onDisk != version else { return }
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        process.arguments = ["-n", Bundle.main.bundlePath]
+        try? process.run()
+        NSApp.terminate(nil)
+    }
+
     private func refresh() {
+        restartIfUpdated()
         guard !scanning, let helper = Bundle.main.executableURL?.deletingLastPathComponent().appendingPathComponent("ports") else { return }
         scanning = true
         DispatchQueue.global(qos: .utility).async {

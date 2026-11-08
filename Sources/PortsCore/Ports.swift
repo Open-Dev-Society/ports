@@ -1,7 +1,7 @@
 import Darwin
 import Foundation
 
-public let portsVersion = "0.1.1"
+public let portsVersion = "0.1.0"
 
 /// One running server: every process in a process group that listens on a port.
 public struct Server: Identifiable, Codable, Equatable {

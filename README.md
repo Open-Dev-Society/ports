@@ -48,7 +48,8 @@ Existing tools answer "what's on this port?". Ports answers "what's running that
 - **Stop the whole server.** Signals the process group, so `pnpm` or `next dev` can't bring it straight back.
 - **Stop every idle server at once**, with five seconds to undo.
 - **Small.** About 12 MB in the background. [See how](#how-it-stays-small).
-- **Private.** No account, no analytics, no network requests.
+- **Private.** No account, no analytics. Its only network request is a daily check for a new version, which you can turn off.
+- **Updates itself.** Asks before installing a new version, with what's changed.
 
 ## Install
 
@@ -73,7 +74,7 @@ Click the port icon in the menu bar.
 | **Moon icon** | Idle: up for at least three hours with nothing connected. An open browser tab counts as connected. |
 | **Stop Idle** | Stops every idle server straight away, without confirming. |
 | **Undo** | Appears for five seconds after a stop and starts those servers again. Closing the panel makes the stop final. |
-| **Gear** | Open at Login, Memory Budget and Quit. |
+| **Gear** | Open at Login, Memory Budget, Check for Updates and Quit. |
 
 The budget is a guide you choose. It starts at a quarter of your Mac's memory, and nothing is stopped when you go over it.
 
@@ -116,7 +117,8 @@ Stop one with: ports stop 3000
 - It refuses a server that shares a process group with a coding agent, or with Ports itself, because stopping it would take those down too.
 - It scans again just before stopping, so an old list can't signal a process that has since been replaced.
 - To make Undo work, the panel holds a stopped server's command, folder and environment, which can include API keys, in memory for five seconds. None of it is written to disk.
-- The only settings saved are your budget and whether Open at Login has been set up.
+- The only settings saved are your budget, whether Open at Login has been set up and whether to check for updates.
+- Once a day Ports downloads the update feed from this repository's latest GitHub release, and nothing else. GitHub sees what any download shows: your IP address and the app's version. Nothing else about your Mac is sent. An update installs only after you agree, and only if it's signed with this project's update key ([Sparkle](https://sparkle-project.org) checks this).
 
 To report a vulnerability, see [SECURITY.md](SECURITY.md).
 

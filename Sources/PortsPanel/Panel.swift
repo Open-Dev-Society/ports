@@ -561,6 +561,14 @@ final class PanelApp: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         budgetItem.submenu = budgets
         menu.addItem(budgetItem)
         menu.addItem(.separator())
+        let check = NSMenuItem(title: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
+        check.target = self
+        menu.addItem(check)
+        let automatic = NSMenuItem(title: "Check Automatically", action: #selector(toggleAutomaticUpdates), keyEquivalent: "")
+        automatic.target = self
+        automatic.state = automaticUpdates() ? .on : .off
+        menu.addItem(automatic)
+        menu.addItem(.separator())
         let quit = NSMenuItem(title: "Quit Ports", action: #selector(quit), keyEquivalent: "")
         quit.target = self
         menu.addItem(quit)
@@ -579,6 +587,19 @@ final class PanelApp: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             message = "Move Ports to Applications first."
             rebuild()
         }
+    }
+
+    /// Sparkle runs in its own program, which outlives the panel and shows its own window.
+    @objc private func checkForUpdates() {
+        let process = Process()
+        process.executableURL = Bundle.main.executableURL?.deletingLastPathComponent().appendingPathComponent("PortsUpdater")
+        process.arguments = ["--now"]
+        try? process.run()
+        popover.close()
+    }
+
+    @objc private func toggleAutomaticUpdates() {
+        setAutomaticUpdates(!automaticUpdates())
     }
 
     @objc private func quit() {

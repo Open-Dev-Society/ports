@@ -10,8 +10,9 @@ bin=$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)
 app=dist/Ports.app
 
 rm -rf "$app"
-mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
-cp "$bin/PortsApp" "$bin/PortsPanel" "$bin/ports" "$app/Contents/MacOS/"
+mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources" "$app/Contents/Frameworks"
+cp "$bin/PortsApp" "$bin/PortsPanel" "$bin/PortsUpdater" "$bin/ports" "$app/Contents/MacOS/"
+ditto "$bin/Sparkle.framework" "$app/Contents/Frameworks/Sparkle.framework"
 cp Resources/AppIcon.icns "$app/Contents/Resources/"
 cat > "$app/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -28,10 +29,19 @@ cat > "$app/Contents/Info.plist" <<PLIST
   <key>LSMinimumSystemVersion</key><string>13.0</string>
   <key>LSUIElement</key><true/>
   <key>NSHumanReadableCopyright</key><string>Open Dev Society. AGPL-3.0.</string>
+  <key>SUFeedURL</key><string>https://github.com/Open-Dev-Society/ports/releases/latest/download/appcast.xml</string>
+  <key>SUPublicEDKey</key><string>JtslS4nnoVfZjF74OL29HRJOHsqNnK8pbH7+QsiLXAY=</string>
+  <key>SUEnableAutomaticChecks</key><false/>
 </dict>
 </plist>
 PLIST
 # ponytail: ad-hoc signature, so macOS warns on first open. Removing that needs a Developer ID and notarization.
+# Inside out: Sparkle's helpers, the framework, then each program and the app.
+fw="$app/Contents/Frameworks/Sparkle.framework/Versions/B"
+for part in "$fw/XPCServices/Installer.xpc" "$fw/XPCServices/Downloader.xpc" "$fw/Autoupdate" "$fw/Updater.app" "$app/Contents/Frameworks/Sparkle.framework"; do
+  codesign --force --sign - "$part"
+done
+codesign --force --sign - "$app/Contents/MacOS/PortsUpdater"
 codesign --force --sign - "$app/Contents/MacOS/ports"
 codesign --force --sign - "$app/Contents/MacOS/PortsPanel"
 codesign --force --sign - "$app"

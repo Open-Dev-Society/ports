@@ -109,6 +109,17 @@ public func setLoginItemWasEnabled() {
     UserDefaults(suiteName: defaultsSuite)?.set(true, forKey: "loginItemEnabled")
 }
 
+// MARK: - Updates
+
+/// On unless turned off. The menu bar agent reads the same key without linking PortsCore.
+public func automaticUpdates() -> Bool {
+    UserDefaults(suiteName: defaultsSuite)?.object(forKey: "automaticUpdates") as? Bool ?? true
+}
+
+public func setAutomaticUpdates(_ on: Bool) {
+    UserDefaults(suiteName: defaultsSuite)?.set(on, forKey: "automaticUpdates")
+}
+
 // MARK: - Welcome
 
 public let welcomeArgument = "--welcome"

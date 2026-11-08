@@ -26,9 +26,19 @@ jobs:
           awk -v v="$VERSION" '$0 ~ "^## \\[" v "\\]" {on=1; next} /^## \[/ {on=0} /^\[.*\]: / {on=0} on' CHANGELOG.md > notes.md
           test -s notes.md
           cat .github/release-install-note.md >> notes.md
+      - name: Sign the update and write the feed
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: ./scripts/appcast.sh "$VERSION"
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" "dist/Ports-$VERSION.dmg" "dist/Ports-$VERSION.zip" "dist/Ports-$VERSION.sha256" \
-            --title "Ports $VERSION" --notes-file notes.md --verify-tag
+          files="dist/Ports-$VERSION.dmg dist/Ports-$VERSION.zip dist/Ports-$VERSION.sha256 dist/appcast.xml"
+          # A release that already exists has its files replaced, so a fix can ship under the same link.
+          if gh release view "$GITHUB_REF_NAME" > /dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" $files --clobber
+            gh release edit "$GITHUB_REF_NAME" --title "Ports $VERSION" --notes-file notes.md
+          else
+            gh release create "$GITHUB_REF_NAME" $files --title "Ports $VERSION" --notes-file notes.md --verify-tag
+          fi
